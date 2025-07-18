@@ -23,7 +23,8 @@ defmodule ThirteenWeb.Endpoint do
     at: "/",
     from: :thirteen,
     gzip: false,
-    only: ThirteenWeb.static_paths()
+    only: ~w(assets fonts images favicon.ico robots.txt),
+    cache_static_manifest: "priv/static/cache_manifest.json"
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

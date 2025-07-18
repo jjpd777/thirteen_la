@@ -36,15 +36,13 @@ COPY thirteen/config ./config
 # Now compile dependencies
 RUN mix deps.compile
 
-# copy all assets
+# copy all assets and application source code
 COPY thirteen/assets ./assets
+COPY thirteen/lib ./lib
+COPY thirteen/priv ./priv
 
 # build assets
 RUN mix assets.deploy
-
-# copy application source
-COPY thirteen/lib ./lib
-COPY thirteen/priv ./priv
 
 # compile and build release
 RUN mix compile
