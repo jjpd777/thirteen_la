@@ -39,7 +39,7 @@ if config_env() == :prod do
   config :thirteen, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :thirteen, ThirteenWeb.Endpoint,
-    url: [host: host, port: 443, scheme: "https"],
+    url: [host: host, scheme: "https"],
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
@@ -48,7 +48,10 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: port
     ],
-    secret_key_base: secret_key_base
+    secret_key_base: secret_key_base,
+    server: true,
+    check_origin: true,
+    force_ssl: [hsts: true]
 
   # ## SSL Support
   #
