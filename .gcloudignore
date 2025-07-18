@@ -1,0 +1,13 @@
+# Ignore the ignore file itself, git directory, and local secrets
+.gcloudignore
+.git
+.gitignore
+.env
+
+# Ignore Phoenix build artifacts and dependencies
+/thirteen/deps/
+/thirteen/_build/
+
+# Ignore Node.js dependencies
+/thirteen/assets/node_modules/
+node_modules/ 

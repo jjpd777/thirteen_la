@@ -1,0 +1,35 @@
+steps:
+  # 1. Build the container image using the Dockerfile in the current directory (.)
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_AR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:$BUILD_ID', '.']
+
+  # 2. Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_AR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:$BUILD_ID']
+
+  # 3. Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - '${_AR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:$BUILD_ID'
+      - '--region'
+      - '${_DEPLOY_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated' # Makes the service publicly accessible
+      # This is the corrected format for providing the secret
+      - '--set-secrets=SECRET_KEY_BASE=SECRET_KEY_BASE:latest'
+
+images:
+  - '${_AR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:$BUILD_ID'
+
+# Default values. You can override these when submitting the build.
+substitutions:
+  _SERVICE_NAME: 'thirteen-la'
+  _DEPLOY_REGION: 'us-central1'
+  _AR_HOSTNAME: 'us-central1-docker.pkg.dev'
+  _REPO_NAME: 'thirteen-la-repo' # The name for your Artifact Registry repository

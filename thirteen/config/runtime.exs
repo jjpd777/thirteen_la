@@ -50,7 +50,7 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base,
     server: true,
-    check_origin: true,
+    check_origin: false,
     force_ssl: [hsts: true]
 
   # ## SSL Support
