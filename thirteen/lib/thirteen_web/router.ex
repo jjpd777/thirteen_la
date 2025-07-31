@@ -18,6 +18,7 @@ defmodule ThirteenWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/txt", PageLive
   end
 
   # Other scopes may use custom stacks.
