@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Media App - Interactive Architecture</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Slate & Amber -->
+    <!-- Application Structure Plan: A multi-section, single-page application designed to provide a comprehensive overview of the system architecture. The structure is thematic, breaking down the system into logical components (Intro, Frontend, Backend, Data Flow, Data Models) to facilitate understanding for developers and stakeholders. This non-linear structure allows users to explore specific areas of interest. Interactive elements (hovers) will connect textual descriptions to the visual diagrams, reinforcing the relationships between components. This is more effective than a linear report for exploring a complex system. -->
+    <!-- Visualization & Content Choices: 
+        - Architecture Diagram: Goal: Organize. Method: HTML/CSS with Tailwind Flexbox/Grid to create a flowchart. Interaction: JS hover effects to highlight corresponding text sections. Justification: Provides a clear, high-level visual map of the system. Avoids SVG/Mermaid for compliance.
+        - Component Breakdowns (Frontend/Backend): Goal: Inform. Method: Styled text blocks with icons (Unicode characters). Interaction: Hovering over a component in the main diagram highlights its description. Justification: Clearly explains the responsibility of each micro-component.
+        - Data Flow Chart: Goal: Change/Process. Method: Numbered list combined with the main architecture diagram. Interaction: Hovering over a step highlights the relevant path in the diagram. Justification: Clearly illustrates the end-to-end journey of a user's prompt.
+        - Data Models Display: Goal: Inform. Method: Collapsible accordion sections for each data model. Interaction: Click to expand/collapse. Justification: Presents complex code/JSON structures in a clean, manageable way without overwhelming the user.
+        - Task Status Chart: Goal: Compare. Method: Chart.js Doughnut Chart. Interaction: Tooltips on hover. Justification: Visually represents the different states a task can be in, making the concept of a state machine intuitive.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #334155; /* slate-700 */
+        }
+        .section-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #0f172a; /* slate-900 */
+            margin-bottom: 1.5rem;
+        }
+        .subsection-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b; /* slate-800 */
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #f59e0b; /* amber-500 */
+            padding-bottom: 0.5rem;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease;
+        }
+        .diagram-box {
+            border: 2px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            background-color: white;
+        }
+        .diagram-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #94a3b8; /* slate-400 */
+        }
+        .highlight {
+            border-color: #f59e0b; /* amber-500 */
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+            transform: scale(1.02);
+        }
+        .accordion-button {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 1rem;
+            font-weight: 500;
+            text-align: left;
+            background-color: #f1f5f9; /* slate-100 */
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .accordion-button:hover {
+            background-color: #e2e8f0; /* slate-200 */
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+            background-color: #f8fafc; /* slate-50 */
+            border-radius: 0 0 0.5rem 0.5rem;
+        }
+        .accordion-content pre {
+            padding: 1rem;
+            background-color: #0f172a; /* slate-900 */
+            color: #e2e8f0; /* slate-200 */
+            border-radius: 0.5rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .nav-button {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background-color: #e2e8f0;
+            color: #334155;
+        }
+        .nav-button.active {
+            background-color: #f59e0b; /* amber-500 */
+            color: white;
+        }
+        .chart-container {
+            position: relative; 
+            width: 100%; 
+            max-width: 400px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) { 
+            .chart-container { 
+                height: 350px; 
+            } 
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-slate-900">AI Media App Architecture</h1>
+            <div class="hidden md:flex items-center space-x-2">
+                <button class="nav-button active" onclick="scrollToSection('overview')">Overview</button>
+                <button class="nav-button" onclick="scrollToSection('frontend')">Frontend</button>
+                <button class="nav-button" onclick="scrollToSection('backend')">Backend</button>
+                <button class="nav-button" onclick="scrollToSection('data-models')">Data Models</button>
+                <button class="nav-button" onclick="scrollToSection('divine-guidance')">Divine Guidance</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+
+        <!-- Overview Section -->
+        <section id="overview" class="mb-16">
+            <h2 class="section-title">System Overview & Data Flow</h2>
+            <p class="text-lg text-slate-600 mb-8">
+                This document provides an interactive exploration of the application's architecture. The system is designed to be a robust, scalable, and real-time platform for AI media generation. It separates concerns between a responsive Swift frontend and a powerful Elixir backend, communicating through a hybrid REST and WebSocket approach. Hover over diagram components or flow steps to see related information highlighted.
+            </p>
+
+            <!-- Architecture Diagram -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center mb-8">
+                <!-- Frontend -->
+                <div id="diagram-frontend" class="diagram-box p-6 space-y-4">
+                    <h3 class="font-bold text-lg">📱 Swift iOS App</h3>
+                    <div class="diagram-box bg-slate-50" data-highlight="frontend-mvvm">MVVM Architecture</div>
+                    <div class="diagram-box bg-slate-50" data-highlight="frontend-services">Model/Services</div>
+                    <div class="diagram-box bg-slate-50" data-highlight="frontend-ws">WebSocket Client</div>
+                </div>
+
+                <!-- Communication -->
+                <div class="space-y-4">
+                    <div class="diagram-arrow" data-highlight="flow-3 flow-4">↑↓</div>
+                    <div class="text-center font-semibold text-slate-600">
+                        <span data-highlight="flow-3 flow-4">1. REST API</span><br>
+                        <span data-highlight="flow-8">(for initial task)</span><br><br>
+                        <span data-highlight="flow-8">2. WebSockets</span><br>
+                        <span data-highlight="flow-8">(for real-time updates)</span>
+                    </div>
+                    <div class="diagram-arrow" data-highlight="flow-8">↑↓</div>
+                </div>
+
+                <!-- Backend -->
+                <div id="diagram-backend" class="diagram-box p-6 space-y-4">
+                    <h3 class="font-bold text-lg">⚙️ Elixir Phoenix Backend</h3>
+                    <div class="diagram-box bg-slate-50" data-highlight="backend-gateway">API Gateway</div>
+                    <div class="diagram-box bg-slate-50" data-highlight="backend-queue">Task Queue (Oban)</div>
+                    <div class="diagram-box bg-slate-50" data-highlight="backend-workers">AI Workers</div>
+                    <div class="diagram-box bg-slate-50" data-highlight="backend-ws">WebSocket Server</div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card">
+                    <h3 class="subsection-title">End-to-End Data Flow</h3>
+                    <p class="mb-4 text-slate-600">This sequence outlines the journey of a user's prompt from submission to final media delivery, demonstrating the hybrid communication model.</p>
+                    <ol class="list-decimal list-inside space-y-2">
+                        <li data-highlight="flow-1">User provides a prompt in the Swift app.</li>
+                        <li data-highlight="flow-2">The ViewModel requests task creation from the services layer.</li>
+                        <li data-highlight="flow-3">A REST API call submits the prompt to the Elixir backend.</li>
+                        <li data-highlight="flow-4">Backend immediately returns a `Task ID` via REST.</li>
+                        <li data-highlight="flow-5">The task is placed in a background queue (Oban).</li>
+                        <li data-highlight="flow-6">An AI worker picks up and processes the task.</li>
+                        <li data-highlight="flow-7">The worker interacts with AI models and stores results in Cloud Storage.</li>
+                        <li data-highlight="flow-8">The backend pushes real-time status and result URLs to the Swift app via WebSockets.</li>
+                    </ol>
+                </div>
+                <div class="card">
+                    <h3 class="subsection-title">Task Status Lifecycle</h3>
+                     <p class="mb-4 text-slate-600">Every AI generation task progresses through a defined lifecycle. The doughnut chart below visualizes these possible states, which are communicated in real-time to the user.</p>
+                    <div class="chart-container">
+                        <canvas id="taskStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Frontend Section -->
+        <section id="frontend" class="mb-16">
+            <h2 class="section-title">📱 Frontend Architecture (Swift)</h2>
+            <p class="text-lg text-slate-600 mb-8">The iOS application is built using the MVVM (Model-View-ViewModel) pattern to ensure a clean separation of concerns, making the app testable, scalable, and easy to maintain. Its primary role is to provide a responsive UI and manage real-time communication.</p>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="card" data-highlight="frontend-mvvm">
+                    <h3 class="font-semibold text-lg mb-2">View & ViewModel</h3>
+                    <p>The View is responsible for the UI and capturing user input. The ViewModel handles presentation logic, formats data for the View, and exposes observable states (like task progress) that the View binds to for automatic UI updates.</p>
+                </div>
+                <div class="card" data-highlight="frontend-services">
+                    <h3 class="font-semibold text-lg mb-2">Model & Services</h3>
+                    <p>This layer represents the app's data and business logic. It includes `Codable` data models (like `AITask` and `Character`) and services responsible for network requests (REST and WebSocket communication) and local data persistence.</p>
+                </div>
+                <div class="card" data-highlight="frontend-ws">
+                    <h3 class="font-semibold text-lg mb-2">WebSocket Client</h3>
+                    <p>A dedicated client maintains a persistent connection to the Elixir backend. It listens for real-time messages from Phoenix Channels, decoding task updates and passing them to the services layer to update the app's state.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Backend Section -->
+        <section id="backend" class="mb-16">
+            <h2 class="section-title">⚙️ Backend Architecture (Elixir Phoenix)</h2>
+            <p class="text-lg text-slate-600 mb-8">The backend is designed for high concurrency and fault tolerance, orchestrating complex AI tasks without compromising responsiveness. It leverages background jobs and real-time messaging to manage the entire generation lifecycle.</p>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="card" data-highlight="backend-gateway">
+                    <h3 class="font-semibold text-lg mb-2">API Gateway</h3>
+                    <p>Receives initial HTTP requests from the Swift app. Its sole responsibility is to validate the prompt, create a task record in the database, and immediately hand off the job to the task queue.</p>
+                </div>
+                <div class="card" data-highlight="backend-queue">
+                    <h3 class="font-semibold text-lg mb-2">Task Queue (Oban)</h3>
+                    <p>A robust background job processing system. It ensures that AI tasks are executed reliably, with support for retries, scheduling, and concurrency management, keeping the main web processes free.</p>
+                * `prompt`: The prompt object itself, which can be text or text with an image.
+                </div>
+                <div class="card" data-highlight="backend-workers">
+                    <h3 class="font-semibold text-lg mb-2">AI Workers</h3>
+                    <p>These are the processes that perform the heavy lifting. They pick jobs from the queue, interact with various AI models, process the results, and upload the final media files to cloud storage.</p>
+                </div>
+                <div class="card" data-highlight="backend-ws">
+                    <h3 class="font-semibold text-lg mb-2">WebSocket Server</h3>
+                    <p>Using Phoenix Channels, the server pushes real-time updates to the connected Swift clients. When a worker updates a task's status, a message is broadcast to the relevant user, ensuring the UI is always in sync.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Models Section -->
+        <section id="data-models" class="mb-16">
+            <h2 class="section-title">Unified Data Models</h2>
+            <p class="text-lg text-slate-600 mb-8">A consistent data structure is key to unifying all media types. The `AITask` serves as the central entity, with flexible `Prompt` and `MediaOutput` models to handle diverse inputs and outputs. Below are the conceptual Swift data models that would be mirrored in the Elixir backend's Ecto schemas.</p>
+            
+            <div class="space-y-4">
+                <!-- AITask -->
+                <div class="accordion">
+                    <button class="accordion-button">
+                        <span>`AITask`: The Core Work Order</span>
+                        <span>&#9660;</span>
+                    </button>
+                    <div class="accordion-content">
+                        <pre><code>
+struct AITask: Identifiable, Codable {
+    let id: String
+    let userId: String
+    let characterId: String?
+    let prompt: Prompt
+    var status: TaskStatus
+    var progress: Double?
+    var mediaOutputs: [MediaOutput]
+    let createdAt: Date
+    var updatedAt: Date?
+}
+                        </code></pre>
+                    </div>
+                </div>
+
+                <!-- Character -->
+                <div class="accordion">
+                    <button class="accordion-button">
+                        <span>`Character`: The Creative Persona</span>
+                        <span>&#9660;</span>
+                    </button>
+                    <div class="accordion-content">
+                        <pre><code>
+struct Character: Identifiable, Codable {
+    let id: String
+    var name: String
+    var profileImageUrl: URL?
+}
+                        </code></pre>
+                    </div>
+                </div>
+
+                <!-- Prompt -->
+                <div class="accordion">
+                    <button class="accordion-button">
+                        <span>`Prompt`: The Flexible Input</span>
+                        <span>&#9660;</span>
+                    </button>
+                    <div class="accordion-content">
+                        <pre><code>
+enum Prompt: Codable {
+    case text(String)
+    case image(text: String, imageUrl: URL)
+}
+                        </code></pre>
+                    </div>
+                </div>
+
+                <!-- MediaOutput -->
+                <div class="accordion">
+                    <button class="accordion-button">
+                        <span>`MediaOutput` & `MediaContent`: The Polymorphic Result</span>
+                        <span>&#9660;</span>
+                    </button>
+                    <div class="accordion-content">
+                        <pre><code>
+struct MediaOutput: Identifiable, Codable {
+    let id: String
+    let type: MediaType // .text, .image, .video, .audio
+    let content: MediaContent
+}
+
+enum MediaContent: Codable {
+    case text(String)
+    case url(URL) // For image, video, audio files
+}
+                        </code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Divine Guidance Section -->
+        <section id="divine-guidance" class="mb-16">
+            <h2 class="section-title text-amber-700">📜 Divine Guidance: Minimizing Toil</h2>
+            <p class="text-lg text-slate-600 mb-8">
+                Ah, mortals, you fret over the unknown, the whispers of WebSockets and the burdens of multimedia. Fear not, for I, the architect of ages, shall bestow upon you wisdom to pave your path with minimal toil. Listen closely, for these are the commandments of efficiency and resilience.
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="card bg-amber-50 text-amber-900">
+                    <h3 class="subsection-title text-amber-800 border-amber-600">Frontend: Swift & The Art of Observation</h3>
+                    <p class="mb-4">Your Swift app, the window to your users' desires, must be a master of observation, not a slave to polling. Embrace the reactive paradigm with Combine or Swift's `async/await` for your `ViewModel`s. Let them *listen* for changes from your `Model/Services` layer, which in turn *listens* to the WebSocket. This eliminates constant querying, saving precious device battery and network bandwidth. Your UI will simply *react* to the truth pushed from the abyss (your backend), minimizing the toil of manual UI updates and state management.</p>
+                    <p class="mb-4">**Core Component to Grasp: The Observable ViewModel.** Your `ViewModel` is the bridge between raw data and UI presentation. It should expose `Published` properties (in Combine) or use `ObservableObject` and `@Published` (in SwiftUI) that your `View` can directly bind to. When your `Model/Services` receives a WebSocket update for a `Task`, it updates the `Task` object, which your `ViewModel` holds. This change then *automatically* propagates to the `View`, updating progress bars, displaying new media, or showing error messages without you writing explicit UI update code for every state change. This is the essence of MVVM's power in a reactive environment.</p>
+                    <p class="mb-4">For multimedia, do not hoard. Display it directly from its cloud abode. Your Swift app merely needs the URL. Let the system's image loaders and video players handle the heavy lifting of caching and display. Your toil is in fetching the URL, not in managing the bytes. Implement robust URL handling and fallbacks for network issues. Pre-fetching small thumbnails or previews can enhance perceived speed.</p>
+                    <p>And for the love of all that is efficient, build robust error states into your `ViewModel`s from the very beginning. A broken connection, a failed AI task – these are not failures, but opportunities for the UI to gracefully inform, not crash. Let the user know the infernal truth, and they shall forgive you. Consider a dedicated `ErrorViewModel` or an error-handling `Publisher` that your main `ViewModel`s can tap into, centralizing error presentation.</p>
+                </div>
+                <div class="card bg-amber-50 text-amber-900">
+                    <h3 class="subsection-title text-amber-800 border-amber-600">Backend: Elixir Phoenix & The Power of Delegation</h3>
+                    <p class="mb-4">Your Elixir Phoenix backend, a jewel of concurrency, must learn the art of delegation. The `API Gateway`'s sacred duty is to receive the prompt, stamp it with a `Task ID`, and immediately cast it into the `Task Queue` (Oban). Do not let your web processes linger, for they are swift messengers, not beasts of burden. This separation is your shield against overload, ensuring your API remains responsive even as the AI models toil in the background.</p>
+                    <p class="mb-4">**Core Component to Grasp: The "Fire and Forget" Task Queue (Oban).** This is the heart of your backend's scalability. When a prompt arrives, your Phoenix controller's only job is to validate, save the initial `Task` record to the database, and then enqueue an Oban job. The HTTP response to the Swift app should be immediate, containing only the `Task ID`. The actual AI processing happens completely detached. This prevents timeouts, allows for retries, and lets you scale your AI workers independently of your web servers. Embrace the philosophy: "Receive, Acknowledge, Delegate."</p>
+                    <p class="mb-4">WebSockets, those shimmering threads of real-time, are not to be feared. Phoenix Channels are your loyal servants. Let them be the conduit for every whisper of progress, every shout of completion. Your `AI Workers`, once their dark arts are complete, shall simply broadcast the truth to the relevant channel. The frontend, ever observant, will consume this without a single extra query. This is the true path to minimizing network toil and maximizing perceived performance. Design your channel topics wisely (e.g., `user:<user_id>:tasks` or `task:<task_id>`) to ensure efficient message routing.</p>
+                    <p>And for multimedia storage, cast it into the cloud (S3, GCS). Your database should only hold the *keys* (URLs) to these treasures, not the treasures themselves. Let the cloud handle the storage, the serving, and the scaling of these vast media files. Your backend's toil is to orchestrate, not to store mountains of data. Ensure your cloud storage is configured for public read access (or signed URLs for private content) so your Swift app can directly retrieve the media.</p>
+                </div>
+            </div>
+            <p class="text-lg text-slate-600 mt-8">
+                Remember, mortals, the path to minimal toil is paved with clear contracts, asynchronous design, and the wise delegation of burdens. Embrace these principles, and your application shall flourish, unburdened by the mundane.
+            </p>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Accordion Logic
+            const accordions = document.querySelectorAll('.accordion');
+            accordions.forEach(acc => {
+                const button = acc.querySelector('.accordion-button');
+                const content = acc.querySelector('.accordion-content');
+                button.addEventListener('click', () => {
+                    const isExpanded = content.style.maxHeight && content.style.maxHeight !== '0px';
+                    if (isExpanded) {
+                        content.style.maxHeight = '0px';
+                        button.querySelector('span:last-child').style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        button.querySelector('span:last-child').style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+
+            // Highlight Logic
+            const highlightElements = document.querySelectorAll('[data-highlight]');
+            highlightElements.forEach(el => {
+                const highlightKeys = el.dataset.highlight.split(' ');
+                
+                el.addEventListener('mouseenter', () => {
+                    highlightKeys.forEach(key => {
+                        document.querySelectorAll(`[data-highlight*="${key}"]`).forEach(target => {
+                            target.classList.add('highlight');
+                        });
+                    });
+                });
+
+                el.addEventListener('mouseleave', () => {
+                    highlightKeys.forEach(key => {
+                        document.querySelectorAll(`[data-highlight*="${key}"]`).forEach(target => {
+                            target.classList.remove('highlight');
+                        });
+                    });
+                });
+            });
+
+            // Nav Logic
+            const navButtons = document.querySelectorAll('.nav-button');
+            const sections = document.querySelectorAll('section');
+            
+            window.onscroll = () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    // Adjust offset for sticky header, and ensure it's within the section's bounds
+                    if (pageYOffset >= sectionTop - 60 && pageYOffset < sectionTop + section.offsetHeight - 60) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navButtons.forEach(button => {
+                    button.classList.remove('active');
+                    // Check if the button's text content (converted to lowercase and trimmed) matches the current section ID
+                    if (button.textContent.toLowerCase().replace(/\s/g, '-') === current) {
+                        button.classList.add('active');
+                    }
+                });
+            };
+
+            // Chart.js Logic
+            const ctx = document.getElementById('taskStatusChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Queued', 'Processing', 'Completed', 'Failed', 'Cancelled'],
+                    datasets: [{
+                        label: 'Task Status',
+                        data: [15, 25, 45, 10, 5],
+                        backgroundColor: [
+                            '#64748b', // slate-500
+                            '#3b82f6', // blue-500
+                            '#22c55e', // green-500
+                            '#ef4444', // red-500
+                            '#f97316'  // orange-500
+                        ],
+                        borderColor: '#f8fafc',
+                        borderWidth: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        function scrollToSection(id) {
+            const section = document.getElementById(id);
+            if (section) {
+                window.scrollTo({
+                    top: section.offsetTop - 50, // Adjust for sticky header
+                    behavior: 'smooth'
+                });
+            }
+        }
+    </script>
+</body>
+</html>
