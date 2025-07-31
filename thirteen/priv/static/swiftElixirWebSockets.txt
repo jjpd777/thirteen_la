@@ -1,0 +1,47 @@
+        Client-Side (Swift App)                  Server-Side (Phoenix on Fly.io)
+    +--------------------------------+       +------------------------------------------------+
+    |                                |       |                                                |
+    | 1. POST /api/tasks (Task A)    |------>| (Controller creates Task A, enqueues Job A)    |
+    |                                |<------| 2. Returns {task_id: "A"}                      |
+    |                                |       |                                                |
+    | 3. POST /api/tasks (Task B)    |------>| (Controller creates Task B, enqueues Job B)    |
+    |                                |<------| 4. Returns {task_id: "B"}                      |
+    |                                |       |                                                |
+    | 5. POST /api/tasks (Task C)    |------>| (Controller creates Task C, enqueues Job C)    |
+    |                                |<------| 6. Returns {task_id: "C"}                      |
+    |                                |       |                                                |
+    |--------------------------------|       |------------------------------------------------|
+    | 7. **Connect to WebSocket ONCE** |------>| Phoenix Channel (`UserSocket`)                 |
+    |                                |       |                                                |
+    | 8. Join Channel "task:A"       |------>| (Server authorizes and confirms join)          |
+    | 9. Join Channel "task:B"       |------>| (Server authorizes and confirms join)          |
+    | 10. Join Channel "task:C"      |------>| (Server authorizes and confirms join)          |
+    |                                |       |                                                |
+    +--------------------------------+       +------------------------------------------------+
+             ^          ^          ^         |       Asynchronous Background Flow (Concurrent)|
+             |          |          |         |                                                |
+             |          |          |         | +-------------+  +-------------+  +-----------+ |
+             |          |          |         | | Oban Worker |  | Oban Worker |  |Oban Worker| |
+             |          |          |         | |   (Job A)   |  |   (Job B)   |  |  (Job C)  | |
+             |          |          |         | +-------------+  +-------------+  +-----------+ |
+             |          |          |         |        |               |               |       |
+             +----------+----------+---------|--------+---------------+---------------+-------+
+               |          |          |       |        | (Broadcasts)  |               |       |
+               |          |          |       | +------v------+ +------v------+ +------v------+ |
+               |          |          |       | | Chan "task:A" | | Chan "task:B" | | Chan "task:C" | |
+               |          |          |       | +-------------+ +-------------+ +-------------+ |
+               |          |          |       |        |               |               |       |
+               +----------+----------+-------+--------+---------------+---------------+       |
+                 |          |          |              |               |               |       |
+                 |          |          |              | PUSH for B    |               |       |
+                 |          |          +--------------+---------------+               |       |
+                 |          |                         |                               |       |
+                 |          +-------------------------+                               |       |
+                 |                                                                    |       |
+                 +--------------------------------------------------------------------+       |
+                                                                                            |
+    11. WebSocket receives ALL messages                                                       |
+        on ONE connection. The Swift                                                          |
+        app uses the `task_id` in the                                                         |
+        payload to update the correct                                                         |
+        UI element (A, B, or C).                                                              |
