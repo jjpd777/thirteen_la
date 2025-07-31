@@ -1,0 +1,115 @@
+                
+------------------------------------------------------------------------------------------
+                
+                           
+                
+                    ┌─────────────────────────────────────┐
+                    │           SWIFT CLIENT              │
+                    │                                     │
+                    │  1. POST /api/tasks                 │
+                    │     {prompt: "test"}                │
+                    │                                     │
+                    │  2. WebSocket Upgrade               │
+                    │     wss://app.com/socket            │
+                    └──────────┬──────────────────┬───────┘
+                               │                  │
+                               ▼                  ▼
+    ┌─────────────────────────────────────────────────────────────────┐
+    │                    PHOENIX ENDPOINT                             │
+    │                                                                 │
+    │  ┌─────────────────┐              ┌─────────────────────────┐   │
+    │  │ HTTP Pipeline   │              │   WebSocket Pipeline    │   │
+    │  │                 │              │                         │   │
+    │  │ POST /api/tasks │              │    /socket              │   │
+    │  └─────────┬───────┘              └──────────┬──────────────┘   │
+    │            │                                 │                  │
+    └────────────┼─────────────────────────────────┼──────────────────┘
+                 │                                 │
+                 ▼                                 ▼
+    ┌─────────────────────┐              ┌─────────────────────────┐
+    │   TASK CONTROLLER   │              │  USER SOCKET + CHANNEL  │
+    │                     │              │                         │
+    │ • Spawn TaskServer  │◄─────────────┤ • Join "task:#{id}"     │
+    │ • Register in       │   MONITOR    │ • Registry.register()   │
+    │   Registry          │   PROCESS    │ • Monitor TaskServer    │
+    │ • Enqueue Oban Job  │              │                         │
+    │ • Return task_id    │              └─────────────────────────┘
+    └─────────┬───────────┘                         ▲
+              │                                     │ 7. Direct Message
+              │ 3. Spawn + Enqueue                  │    send(channel_pid, msg)
+              ▼                                     │
+    ┌─────────────────────────────────────────────────────────────────┐
+    │                 DYNAMIC SUPERVISOR                              │
+    │  ┌─────────────────────────────────────────────────────────┐   │
+    │  │            TASK SERVER (GenServer)                     │   │
+    │  │  task_id: "abc-123"                                    │   │
+    │  │  state: %{progress: 0.4, status: :processing,         │   │
+    │  │          channel_pid: #PID<0.123.0>,                  │   │
+    │  │          started_at: ~U[...]}                          │   │
+    │  │                                                        │   │
+    │  │  # Process holds ALL task state in memory              │   │
+    │  │  # Fast microsecond access, no DB queries              │   │
+    │  └─────────────────────────────────────────────────────────┘   │
+    └─────────────────────┬───────────────────────────────────────────┘
+                          │ 4. Worker finds TaskServer
+                          ▼      via Registry.lookup()
+    ┌─────────────────────────────────────────────────────────────────┐
+    │                    OBAN WORKER                                  │
+    │                                                                 │
+    │  def perform(%{args: %{"task_id" => id}}) do                   │
+    │    [{task_pid, _}] = Registry.lookup(TaskRegistry, id)         │
+    │    for i <- 1..5 do                                            │
+    │      :timer.sleep(2000)                                        │
+    │      progress = i / 5.0                                        │
+    │      ┌─────────────────────────────────────────────────────┐   │
+    │      │ 5. DIRECT GenServer.call()                         │   │
+    │      │    TaskServer.update_progress(task_pid, progress)  │   │
+    │      │    # No database, pure memory update!             │   │
+    │      └─────────────────────────────────────────────────────┘   │
+    │    end                                                          │
+    │  end                                                            │
+    └─────────────────────────────────────────────────────────────────┘
+                                    ▲
+                                    │ 6. TaskServer updates state
+                                    │    and sends direct message
+                                    ▼
+    ┌─────────────────────────────────────────────────────────────────┐
+    │                    PROCESS REGISTRY                             │
+    │                                                                 │
+    │  Registry Table: TaskRegistry                                   │
+    │  ┌─────────────┬─────────────────┬─────────────────────────┐   │
+    │  │ Key         │ PID             │ Metadata                │   │
+    │  ├─────────────┼─────────────────┼─────────────────────────┤   │
+    │  │ "abc-123"   │ #PID<0.456.0>   │ %{type: :task_server}   │   │
+    │  │ "def-456"   │ #PID<0.789.0>   │ %{type: :task_server}   │   │
+    │  └─────────────┴─────────────────┴─────────────────────────┘   │
+    │                                                                 │
+    │  # Direct addressing: no topics, no broadcasts!                │
+    │  # Registry.send(TaskRegistry, task_id, message)               │
+    └─────────────────────────────────────────────────────────────────┘
+                                    ▲
+                                    │
+                  ┌─────────────────┴─────────────────┐
+                  │                                   │
+                  ▼                                   ▼
+    ┌─────────────────────────────┐       ┌─────────────────────────────┐
+    │       BACKUP STORAGE        │       │      PROCESS MONITORING     │
+    │        (PostgreSQL)         │       │         (Supervisor)        │
+    │                             │       │                             │
+    │ • Periodic snapshots        │       │ • Restart crashed TaskServer│
+    │ • Audit trail               │       │ • Cleanup orphaned processes│
+    │ • Historical queries        │       │ • Health checks             │
+    │ • NOT for real-time state   │       │ • Process linking           │
+    └─────────────────────────────┘       └─────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│              PROCESS-COORDINATED MAGIC                             │
+├─────────────────────────────────────────────────────────────────────┤
+│ 1. Swift POST → Spawn TaskServer process + Registry.register()     │
+│ 2. Swift WebSocket → Registry.register() channel, monitor TaskSvr  │
+│ 3. Oban worker → Registry.lookup() TaskServer, direct communication│
+│ 4. TaskServer → Updates state in memory, sends direct messages     │
+│ 5. Channel → Receives direct message, forwards to Swift            │
+│ 6. Supervision → Auto-restart any crashed processes                │
+│ 7. Registry → Instant process discovery, no database queries       │
+└─────────────────────────────────────────────────────────────────────┘
