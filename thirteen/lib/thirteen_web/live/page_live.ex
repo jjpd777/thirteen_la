@@ -2,12 +2,20 @@ defmodule ThirteenWeb.PageLive do
   use ThirteenWeb, :live_view
   require Logger
 
+  # Define the available files
+  @available_files [
+    "swiftElixirWebSockets.txt",
+    "websocketsElixirFirst.txt",
+    "hotelAnalogy.txt"
+  ]
+
   @impl true
   def mount(_params, _session, socket) do
     # Initialize with the first file
     socket =
       socket
       |> assign(:current_file, "swiftElixirWebSockets.txt")
+      |> assign(:available_files, @available_files)
       |> load_file_content("swiftElixirWebSockets.txt")
 
     {:ok, socket}
@@ -15,11 +23,10 @@ defmodule ThirteenWeb.PageLive do
 
   @impl true
   def handle_event("toggle_file", _params, socket) do
-    # Toggle between the two files
-    new_file = case socket.assigns.current_file do
-      "swiftElixirWebSockets.txt" -> "websocketsElixirFirst.txt"
-      "websocketsElixirFirst.txt" -> "swiftElixirWebSockets.txt"
-    end
+    # Cycle through all available files
+    current_index = Enum.find_index(@available_files, &(&1 == socket.assigns.current_file))
+    next_index = rem(current_index + 1, length(@available_files))
+    new_file = Enum.at(@available_files, next_index)
 
     socket =
       socket
@@ -44,6 +51,24 @@ defmodule ThirteenWeb.PageLive do
     assign(socket, :content, content)
   end
 
+  defp get_next_file_name(current_file) do
+    case current_file do
+      "swiftElixirWebSockets.txt" -> "WebSockets First"
+      "websocketsElixirFirst.txt" -> "Hotel Analogy"
+      "hotelAnalogy.txt" -> "Swift WebSockets"
+      _ -> "Next File"
+    end
+  end
+
+  defp get_display_name(filename) do
+    case filename do
+      "swiftElixirWebSockets.txt" -> "Swift WebSockets Architecture"
+      "websocketsElixirFirst.txt" -> "WebSockets First Implementation"
+      "hotelAnalogy.txt" -> "Hotel Analogy Explanation"
+      _ -> filename
+    end
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -54,14 +79,15 @@ defmodule ThirteenWeb.PageLive do
           phx-click="toggle_file"
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
         >
-          Switch to <%= if @current_file == "swiftElixirWebSockets.txt", do: "WebSockets First", else: "Swift WebSockets" %>
+          Switch to <%= get_next_file_name(@current_file) %>
         </button>
       </div>
 
-      <!-- File indicator -->
+      <!-- File indicator with progress -->
       <div class="mb-2 text-center">
         <span class="inline-block px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm font-medium">
-          Currently viewing: <%= @current_file %>
+          <%= get_display_name(@current_file) %>
+          (<%= Enum.find_index(@available_files, &(&1 == @current_file)) + 1 %>/<%= length(@available_files) %>)
         </span>
       </div>
 
