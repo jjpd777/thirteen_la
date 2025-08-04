@@ -1,0 +1,360 @@
+🍎 SWIFT CLIENT ARCHITECTURE
+===============================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           🏭 SWIFT TASK FACTORY                                │
+│                                                                                 │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────────┐ │
+│  │   🎭 VIEWS      │    │  🏢 VIEWMODELS  │    │     ⚙️ SERVICES            │ │
+│  │  (The Stage)    │    │ (Factory Boss)  │    │   (The Workshop)            │ │
+│  │                 │    │                 │    │                             │ │
+│  │ • TasksTabView  │◄──►│ • TaskViewModel │◄──►│ • TaskChannelService        │ │
+│  │ • ChatView      │    │ • TaskUIState   │    │ • WebSocketManager          │ │
+│  │ • TaskProgress  │    │ • TaskBusiness  │    │ • PhoenixProtocolHandler    │ │
+│  │   Card          │    │   Logic         │    │ • ConnectionLifecycle       │ │
+│  └─────────────────┘    └─────────────────┘    └──────────┬──────────────────┘ │
+│                                                            │                    │
+└────────────────────────────────────────────────────────────┼────────────────────┘
+                                                             │
+                          ⚡ LIGHTNING TELEGRAPH WIRE ⚡     │
+                                  (WebSocket)                │
+                                                             ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        🧙‍♂️ WIZARD'S WORKSHOP                                      │
+│                        (Phoenix Backend - We Don't Touch)                      │
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │  📨 Message Types We Care About:                                       │   │
+│  │                                                                         │   │
+│  │  1. "llm_generate" → Send prompt to wizard                            │   │
+│  │  2. "llm_response" → Get magical text back                            │   │
+│  │  3. "heartbeat" → Keep the connection alive                           │   │
+│  │  4. "progress" → Real-time sparks of progress                         │   │
+│  │                                                                         │   │
+│  │  🎯 Our Focus: RAPID AI Text Generation (No streaming/images/video)   │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        🎮 SWIFT DEVELOPMENT PLAYGROUND                         │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  🎯 RAPID AI GENERATION FLOW:                                                  │
+│                                                                                 │
+│  1. User types prompt → TaskViewModel.submitTask()                             │
+│  2. TaskChannelService.sendLLMGenerate(prompt, model: "gemini-2.5-flash-lite") │
+│  3. ⚡ Instant WebSocket message to wizard                                      │
+│  4. Real-time progress updates stream back                                     │
+│  5. UI updates instantly with results                                          │
+│                                                                                 │
+│  🏗️ SWIFT FOCUS AREAS:                                                         │
+│                                                                                 │
+│  • Enhanced UI/UX for rapid AI interactions                                    │
+│  • Smart prompt templates and history                                          │
+│  • Result caching and management                                               │
+│  • Multiple concurrent AI requests                                             │
+│  • Rich text formatting and display                                            │
+│  • Keyboard shortcuts and power-user features                                  │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+🎪 THE MAGIC FORMULA:
+┌─────────────────────────────────────────────────────────────────┐
+│  Swift MVVM + Phoenix WebSocket + Rapid AI = ⚡ Lightning Fast  │
+│                                                                 │
+│  No Backend Complexity → Pure Swift Innovation                 │
+│  No Streaming → Instant Complete Responses                     │
+│  No Heavy Media → Pure Text Intelligence                       │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        🎨 THE SWIFT DESIGN PHILOSOPHY                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  "Reactive elegance meets real-time AI generation"                         │
+│                                                                             │
+│  🎯 CORE DESIGN PRINCIPLES:                                                 │
+│                                                                             │
+│  • DECLARATIVE UI: SwiftUI's state-driven rendering for instant updates    │
+│  • REACTIVE FLOW: Combine streams connect user actions to AI responses     │
+│  • MVVM SEPARATION: Clear boundaries between presentation and business      │
+│  • REAL-TIME FIRST: WebSocket-native design, no polling or REST fallbacks  │
+│  • OPTIMISTIC UI: Show progress immediately, handle failures gracefully    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            📱 ARCHITECTURAL LAYERS                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🎭 PRESENTATION LAYER (SwiftUI Views):                                     │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     THE USER EXPERIENCE STAGE                      │   │
+│  │                                                                     │   │
+│  │  • TasksTabView: The main orchestrator of user interactions        │   │
+│  │  • PromptInputView: Smart text input with real-time validation     │   │
+│  │  • TaskProgressCard: Live progress visualization with animations   │   │
+│  │  • ResultsHistoryView: Persistent conversation memory              │   │
+│  │  • StatusIndicators: Connection health and system state            │   │
+│  │                                                                     │   │
+│  │  DESIGN PHILOSOPHY:                                                 │   │
+│  │  Views are pure functions of state - no business logic,            │   │
+│  │  no network calls, just beautiful reactive presentations           │   │
+│  │  of the current application state.                                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  🧠 BUSINESS LOGIC LAYER (ViewModels):                                      │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    THE COORDINATION BRAIN                           │   │
+│  │                                                                     │   │
+│  │  • TaskViewModel: The central orchestrator of AI generation flow   │   │
+│  │  • UIState Management: Tracks active tasks, history, connections   │   │
+│  │  • Business Rules: Validates prompts, manages task lifecycle       │   │
+│  │  • State Synchronization: Keeps UI and server state aligned        │   │
+│  │                                                                     │   │
+│  │  RESPONSIBILITY BOUNDARIES:                                         │   │
+│  │  ViewModels own the "what should happen" logic but delegate        │   │
+│  │  the "how it happens" to service layers. They transform            │   │
+│  │  network events into UI-friendly state changes.                    │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ⚙️ SERVICE LAYER (Network & State):                                        │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     THE COMMUNICATION ENGINE                        │   │
+│  │                                                                     │   │
+│  │  • TaskChannelService: Phoenix Channel abstraction and protocol    │   │
+│  │  • WebSocketManager: Low-level connection lifecycle management     │   │
+│  │  • PhoenixClient: Message serialization and Phoenix protocol       │   │
+│  │  • ConnectionManager: Resilient networking with auto-reconnect     │   │
+│  │                                                                     │   │
+│  │  ARCHITECTURAL DECISIONS:                                           │   │
+│  │  Services provide reactive streams (Combine Publishers) that        │   │
+│  │  ViewModels can subscribe to. No callbacks, no delegates -         │   │
+│  │  pure functional reactive programming.                              │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        🔄 THE REACTIVE DATA FLOW                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🌊 INFORMATION ARCHITECTURE:                                               │
+│                                                                             │
+│     User Input → ViewModel → Service → WebSocket → Phoenix                 │
+│                     ↓                                                       │
+│     UI Update ← State Change ← Combine Stream ← WebSocket ← Phoenix         │
+│                                                                             │
+│  🎯 STATE MANAGEMENT PHILOSOPHY:                                            │
+│                                                                             │
+│  SINGLE SOURCE OF TRUTH:                                                    │
+│  • TaskViewModel holds authoritative UI state                              │
+│  • Phoenix TaskServer holds authoritative business state                   │
+│  • Synchronization happens via WebSocket message streams                   │
+│                                                                             │
+│  OPTIMISTIC UPDATES:                                                        │
+│  • UI shows task as "processing" immediately when submitted                │
+│  • Progress updates stream in real-time from server                        │
+│  • Error states gracefully replace optimistic assumptions                  │
+│                                                                             │
+│  REACTIVE SYNCHRONIZATION:                                                  │
+│  • @Published properties automatically trigger UI redraws                  │
+│  • Combine pipelines transform server events into UI state                 │
+│  • No manual state management - everything flows declaratively             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      🎨 USER EXPERIENCE ARCHITECTURE                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🚀 INSTANT FEEDBACK LOOPS:                                                 │
+│                                                                             │
+│  PROMPT SUBMISSION:                                                         │
+│  • Immediate visual feedback (button state, loading indicators)            │
+│  • Instant task card appears with "queued" status                          │
+│  • Progress bar initializes and begins animated updates                    │
+│                                                                             │
+│  REAL-TIME PROGRESS:                                                        │
+│  • Smooth progress bar animations (not choppy discrete jumps)              │
+│  • Status badge color changes reflect processing phases                    │
+│  • Contextual loading states with meaningful descriptions                  │
+│                                                                             │
+│  COMPLETION EXPERIENCE:                                                     │
+│  • Seamless transition from progress to final result                       │
+│  • Results appear with subtle animations and typography                    │
+│  • Task moves from "active" to "history" with visual continuity            │
+│                                                                             │
+│  🎭 EMOTIONAL DESIGN:                                                       │
+│                                                                             │
+│  ANTICIPATION MANAGEMENT:                                                   │
+│  • Clear progress indicators reduce perceived wait time                    │
+│  • Contextual messages explain what's happening behind the scenes          │
+│  • Multiple concurrent tasks show the system's power                       │
+│                                                                             │
+│  CONFIDENCE BUILDING:                                                       │
+│  • Connection status always visible and reassuring                         │
+│  • Error states include clear recovery actions                             │
+│  • Task history demonstrates system reliability                            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     ⚡ WEBSOCKET INTEGRATION STRATEGY                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🔌 PHOENIX CHANNEL ABSTRACTION:                                            │
+│                                                                             │
+│  CONNECTION PHILOSOPHY:                                                     │
+│  • One persistent WebSocket connection for entire app session              │
+│  • Dynamic channel joining for each AI generation task                     │
+│  • Channels are cheap - create liberally, clean up automatically           │
+│                                                                             │
+│  MESSAGE FLOW DESIGN:                                                       │
+│  • Phoenix message format abstracted behind Swift-native types             │
+│  • Strongly-typed message payloads prevent runtime errors                  │
+│  • Combine Publishers expose server events as reactive streams             │
+│                                                                             │
+│  RESILIENCE PATTERNS:                                                       │
+│  • Exponential backoff reconnection with jitter                            │
+│  • Message queuing during brief disconnections                             │
+│  • Graceful degradation when server is unreachable                         │
+│                                                                             │
+│  🎯 REAL-TIME ARCHITECTURE BENEFITS:                                        │
+│                                                                             │
+│  INSTANT RESPONSIVENESS:                                                    │
+│  • No polling delays - updates arrive immediately                          │
+│  • Multiple concurrent tasks without performance degradation               │
+│  • True real-time progress tracking (not simulated)                        │
+│                                                                             │
+│  EFFICIENT RESOURCE USAGE:                                                  │
+│  • Single connection handles all app communication                         │
+│  • No periodic HTTP requests wasting battery/bandwidth                     │
+│  • Server pushes only relevant updates to active tasks                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        📊 STATE & DATA ARCHITECTURE                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🗂️ DATA MODEL PHILOSOPHY:                                                  │
+│                                                                             │
+│  DOMAIN-DRIVEN DESIGN:                                                      │
+│  • TaskUIState: Represents everything UI needs to display a task           │
+│  • TaskResult: Immutable completed conversation entries                    │
+│  • ConnectionStatus: System health and networking state                    │
+│                                                                             │
+│  VALUE TYPES EVERYWHERE:                                                    │
+│  • Structs for data models prevent unintended mutations                    │
+│  • Identifiable protocol enables SwiftUI list optimizations               │
+│  • Codable compliance for seamless network serialization                   │
+│                                                                             │
+│  🔄 STATE SYNCHRONIZATION PATTERNS:                                         │
+│                                                                             │
+│  UNIDIRECTIONAL DATA FLOW:                                                  │
+│  • Events flow up (UI → ViewModel → Service)                               │
+│  • State flows down (Service → ViewModel → UI)                             │
+│  • No bidirectional bindings that create complexity                        │
+│                                                                             │
+│  REACTIVE UPDATES:                                                          │
+│  • @Published properties trigger automatic UI refreshes                    │
+│  • Combine operators transform server data into UI-friendly formats        │
+│  • State changes are atomic and consistent                                 │
+│                                                                             │
+│  PERSISTENT STATE:                                                          │
+│  • Task history persists across app launches                               │
+│  • User preferences and connection settings stored locally                 │
+│  • Optimistic state survives brief network interruptions                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      🚀 PERFORMANCE & SCALABILITY                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ⚡ CLIENT-SIDE OPTIMIZATIONS:                                               │
+│                                                                             │
+│  RENDERING PERFORMANCE:                                                     │
+│  • SwiftUI's declarative updates minimize unnecessary redraws              │
+│  • Proper view identity prevents excessive view recreation                  │
+│  • Lazy loading for large task history lists                               │
+│                                                                             │
+│  MEMORY MANAGEMENT:                                                         │
+│  • Weak reference patterns prevent retain cycles                           │
+│  • Automatic cleanup of completed task subscriptions                       │
+│  • Bounded task history prevents unbounded memory growth                   │
+│                                                                             │
+│  NETWORK EFFICIENCY:                                                        │
+│  • Single WebSocket connection eliminates connection overhead              │
+│  • JSON message compression reduces bandwidth usage                        │
+│  • Smart message batching during high-frequency updates                    │
+│                                                                             │
+│  🎯 SCALABILITY CHARACTERISTICS:                                            │
+│                                                                             │
+│  CONCURRENT TASKS:                                                          │
+│  • UI handles dozens of simultaneous AI generation requests                │
+│  • Each task maintains independent state and progress tracking             │
+│  • No blocking operations in main thread                                   │
+│                                                                             │
+│  RESOURCE ADAPTATION:                                                       │
+│  • Automatic quality adjustments based on device capabilities              │
+│  • Battery-aware optimizations for background processing                   │
+│  • Network-aware behavior during poor connectivity                         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        🛡️ RESILIENCE & ERROR HANDLING                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🔄 FAILURE RECOVERY PATTERNS:                                              │
+│                                                                             │
+│  CONNECTION RESILIENCE:                                                     │
+│  • Automatic reconnection with exponential backoff                         │
+│  • Graceful degradation during network interruptions                       │
+│  • User feedback for connection state changes                              │
+│                                                                             │
+│  TASK FAILURE HANDLING:                                                     │
+│  • Individual task failures don't affect other operations                  │
+│  • Clear error messages with actionable recovery steps                     │
+│  • Retry mechanisms for transient failures                                 │
+│                                                                             │
+│  STATE CONSISTENCY:                                                         │
+│  • Optimistic UI updates with rollback on failure                          │
+│  • Server state reconciliation after reconnection                          │
+│  • Conflict resolution for concurrent state changes                        │
+│                                                                             │
+│  🎨 USER-CENTERED ERROR DESIGN:                                             │
+│                                                                             │
+│  PROGRESSIVE DISCLOSURE:                                                     │
+│  • Basic error states for casual users                                     │
+│  • Detailed technical info available for power users                       │
+│  • Context-appropriate error messaging                                     │
+│                                                                             │
+│  RECOVERY GUIDANCE:                                                         │
+│  • Clear next steps for every error condition                              │
+│  • One-tap recovery actions where possible                                 │
+│  • Graceful fallbacks that maintain core functionality                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+🍎 THE SWIFT ARCHITECTURE ESSENCE:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  This isn't just a mobile app - it's a real-time AI collaboration          │
+│  interface that happens to run on iOS. Every architectural decision        │
+│  prioritizes immediate responsiveness and elegant user experience.          │
+│                                                                             │
+│  The Swift side transforms complex distributed system interactions into    │
+│  intuitive, delightful user experiences. It makes the powerful Phoenix     │
+│  backend feel effortless and instant through carefully crafted reactive    │
+│  patterns and thoughtful state management.                                 │
+│                                                                             │
+│  Result: An AI generation app that feels like magic - responsive,          │
+│  reliable, and beautifully designed for the way humans actually think      │
+│  and work with AI assistants.                                              │
+└─────────────────────────────────────────────────────────────────────────────┘ 

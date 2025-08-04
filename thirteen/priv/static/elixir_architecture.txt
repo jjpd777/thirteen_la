@@ -1,0 +1,275 @@
+🧙‍♂️ ELIXIR PHOENIX BACKEND ARCHITECTURE
+===============================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        🎯 THE ELIXIR PHILOSOPHY                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  "Let it crash, but never let the system fail"                             │
+│                                                                             │
+│  🔥 CORE PRINCIPLES:                                                        │
+│                                                                             │
+│  • PROCESS ISOLATION: Every task is an independent, supervised process     │
+│  • FAIL-FAST RECOVERY: Crashes are expected, restarts are automatic        │
+│  • DIRECT MESSAGING: No middleware overhead, pure process communication    │
+│  • MEMORY-FIRST STATE: Real-time data lives in processes, not databases    │
+│  • ELASTIC CONCURRENCY: Spawn millions of lightweight processes on demand  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        🏗️ THE PROCESS ARCHITECTURE                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🌳 SUPERVISION TREE PHILOSOPHY:                                            │
+│                                                                             │
+│  APPLICATION ROOT:                                                          │
+│  • Phoenix Endpoint: HTTP and WebSocket entry points                       │
+│  • Process Registry: The phone book for all running processes              │
+│  • Dynamic Supervisor: The process factory for TaskServers                 │
+│  • Oban Supervisor: Background job orchestration                           │
+│                                                                             │
+│  🏭 TASKSERVER PROCESSES:                                                   │
+│                                                                             │
+│  LIFECYCLE PHILOSOPHY:                                                      │
+│  • Born on first AI request with unique task UUID                          │
+│  • Lives entirely in memory for microsecond-fast access                    │
+│  • Holds authoritative state for progress, status, and metadata            │
+│  • Dies gracefully when task completes or crashes and restarts on failure  │
+│                                                                             │
+│  STATE OWNERSHIP:                                                           │
+│  • Each TaskServer owns exactly one AI generation task                     │
+│  • No shared state - each process is completely isolated                   │
+│  • Channel PID stored for direct communication pathway                     │
+│  • Progress updates happen in pure memory with instant propagation         │
+│                                                                             │
+│  🔄 PROCESS COORDINATION:                                                   │
+│                                                                             │
+│  REGISTRY-BASED DISCOVERY:                                                  │
+│  • O(1) process lookup by task UUID                                        │
+│  • No database queries for finding active processes                        │
+│  • Direct PID-to-PID messaging between workers and channels                │
+│  • Automatic cleanup when processes terminate                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      ⚡ REAL-TIME COMMUNICATION ENGINE                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🔌 WEBSOCKET ARCHITECTURE:                                                 │
+│                                                                             │
+│  CONNECTION STRATEGY:                                                       │
+│  • Single persistent WebSocket per Swift client                            │
+│  • Dynamic channel spawning for each AI generation task                    │
+│  • Channels are stateful bridges between Swift and TaskServers             │
+│  • Automatic channel cleanup when tasks complete                           │
+│                                                                             │
+│  CHANNEL LIFECYCLE:                                                         │
+│  • Swift joins "task:#{uuid}" channel for each AI request                  │
+│  • Channel registers itself in Registry for direct messaging               │
+│  • TaskServer stores channel PID for progress updates                      │
+│  • Messages flow directly without pub/sub overhead                         │
+│                                                                             │
+│  🎯 MESSAGE FLOW DESIGN:                                                    │
+│                                                                             │
+│  INBOUND (Swift → Elixir):                                                  │
+│  • "llm_generate" with prompt triggers Oban job enqueue                    │
+│  • Immediate acknowledgment to Swift (optimistic UI)                       │
+│  • Background processing begins asynchronously                             │
+│                                                                             │
+│  OUTBOUND (Elixir → Swift):                                                 │
+│  • "progress" messages with real-time completion percentage                │
+│  • "llm_response" with final AI-generated content                          │
+│  • "error" messages with actionable failure information                    │
+│                                                                             │
+│  PERFORMANCE CHARACTERISTICS:                                               │
+│  • Sub-millisecond message delivery within Elixir processes                │
+│  • No serialization overhead for internal process messaging                │
+│  • JSON serialization only at WebSocket boundary                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     🚀 BACKGROUND PROCESSING ENGINE                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ⚙️ OBAN WORKER ORCHESTRATION:                                              │
+│                                                                             │
+│  JOB QUEUE PHILOSOPHY:                                                      │
+│  • Reliable job processing with automatic retries                          │
+│  • Dead letter queue for permanently failed tasks                          │
+│  • Priority queues for different AI model types                            │
+│  • Graceful job cancellation for interrupted tasks                         │
+│                                                                             │
+│  WORKER EXECUTION MODEL:                                                    │
+│  • Workers find TaskServer via Registry lookup                             │
+│  • Direct process calls for progress updates                               │
+│  • No database writes during processing for maximum speed                  │
+│  • Atomic completion with final result storage                             │
+│                                                                             │
+│  🎯 LLM INTEGRATION STRATEGY:                                               │
+│                                                                             │
+│  AI PROCESSING FLOW:                                                        │
+│  • Background worker picks up enqueued task                                │
+│  • Calls external LLM API (Gemini, GPT, Claude, etc.)                      │
+│  • Streams progress updates to TaskServer in real-time                     │
+│  • Handles failures with exponential backoff retries                       │
+│                                                                             │
+│  CONCURRENCY MODEL:                                                         │
+│  • Multiple workers process different tasks simultaneously                 │
+│  • No blocking between unrelated AI generation requests                    │
+│  • Resource pooling for external API connections                           │
+│  • Rate limiting and quota management per AI provider                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        💾 STATE & PERSISTENCE STRATEGY                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🧠 MEMORY-FIRST ARCHITECTURE:                                              │
+│                                                                             │
+│  REAL-TIME STATE:                                                           │
+│  • TaskServer processes hold live state in memory                          │
+│  • Progress updates happen without database I/O                            │
+│  • Sub-millisecond access times for current task status                    │
+│  • Automatic garbage collection when processes terminate                   │
+│                                                                             │
+│  DURABILITY STRATEGY:                                                       │
+│  • PostgreSQL stores completed tasks for history                           │
+│  • Periodic snapshots of active tasks for crash recovery                   │
+│  • Write-through caching for user preferences                              │
+│  • Event sourcing for audit trails and debugging                           │
+│                                                                             │
+│  🔄 CONSISTENCY MODEL:                                                      │
+│                                                                             │
+│  EVENTUAL CONSISTENCY:                                                      │
+│  • TaskServer state is always authoritative                                │
+│  • Database updates happen asynchronously                                  │
+│  • Conflict resolution favors in-memory state                              │
+│  • Recovery rebuilds memory state from persistent storage                  │
+│                                                                             │
+│  SYNCHRONIZATION PATTERNS:                                                  │
+│  • Write-behind pattern for completed tasks                                │
+│  • Optimistic concurrency with version vectors                             │
+│  • Distributed state management across multiple nodes                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      ⚡ PERFORMANCE & SCALABILITY DESIGN                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🎯 LATENCY OPTIMIZATIONS:                                                  │
+│                                                                             │
+│  PROCESS MESSAGING:                                                         │
+│  • Direct PID communication bypasses all middleware                        │
+│  • No serialization between Elixir processes                               │
+│  • Registry lookups in constant time O(1)                                  │
+│  • Hot path completely avoids database queries                             │
+│                                                                             │
+│  MEMORY EFFICIENCY:                                                         │
+│  • Lightweight processes (2KB initial memory)                              │
+│  • Copy-on-write semantics for shared data                                 │
+│  • Automatic garbage collection per process                                │
+│  • Process hibernation for idle tasks                                      │
+│                                                                             │
+│  🚀 HORIZONTAL SCALING:                                                     │
+│                                                                             │
+│  DISTRIBUTED ARCHITECTURE:                                                  │
+│  • Multi-node clusters with distributed Registry                           │
+│  • Consistent hashing for task distribution                                │
+│  • Node-local process affinity for hot tasks                               │
+│  • Automatic failover between cluster nodes                                │
+│                                                                             │
+│  CAPACITY PLANNING:                                                         │
+│  • Linear scaling: 1 process per concurrent AI request                     │
+│  • Memory-bound scaling on typical hardware                                │
+│  • Network-bound scaling with high-throughput AI APIs                      │
+│  • Auto-scaling based on queue depth and response times                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        🛡️ RESILIENCE & FAULT TOLERANCE                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🔄 FAILURE RECOVERY PATTERNS:                                              │
+│                                                                             │
+│  SUPERVISOR STRATEGIES:                                                     │
+│  • One-for-one: TaskServer crashes don't affect other tasks                │
+│  • Rest-for-one: Channel failures restart dependent processes              │
+│  • One-for-all: Critical system components restart together                │
+│  • Exponential backoff for rapidly failing processes                       │
+│                                                                             │
+│  PROCESS ISOLATION:                                                         │
+│  • Memory corruption in one task cannot affect others                      │
+│  • Infinite loops are contained to single processes                        │
+│  • Resource exhaustion triggers selective process termination              │
+│  • Cascading failures prevented by supervision boundaries                  │
+│                                                                             │
+│  🎯 GRACEFUL DEGRADATION:                                                   │
+│                                                                             │
+│  SERVICE DEGRADATION:                                                       │
+│  • AI API failures fallback to cached or simpler models                    │
+│  • Database outages continue with memory-only operation                    │
+│  • High load triggers request queuing with wait time estimates             │
+│  • Partial node failures redistribute work to healthy nodes                │
+│                                                                             │
+│  MONITORING & ALERTING:                                                     │
+│  • Real-time process health monitoring                                     │
+│  • Performance metrics and latency histograms                              │
+│  • Automatic alerting for critical system thresholds                       │
+│  • Distributed tracing for complex request flows                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        📊 DATA STRUCTURES & SCHEMAS                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  USER ENTITY:                                                               │
+│  • id (UUID) - Primary key                                                 │
+│  • external_id (String) - From Swift app's user system                     │
+│  • name, email (Optional) - Basic profile info                             │
+│  • timestamps - Created/updated tracking                                   │
+│                                                                             │
+│  TASK ENTITY:                                                               │
+│  • id (UUID) - Primary key                                                 │
+│  • user_id (UUID) - Foreign key to users                                   │
+│  • status (Enum) - [:queued, :processing, :completed, :failed]             │
+│  • prompt (String) - Input text for AI generation                          │
+│  • response (Text) - AI-generated output                                   │
+│  • model (String) - AI model identifier (gemini-2.5-flash-lite)            │
+│  • progress (Float) - 0.0 to 1.0 completion percentage                     │
+│  • priority (Integer) - Queue ordering                                     │
+│  • started_at, completed_at (DateTime) - Timing metadata                   │
+│  • error_message (Text) - Failure details if applicable                    │
+│                                                                             │
+│  TASKSERVER STATE:                                                          │
+│  • task_id (String) - UUID identifier                                      │
+│  • progress (Float) - Current completion 0.0-1.0                           │
+│  • status (Atom) - Current processing state                                │
+│  • channel_pid (PID) - Direct communication to Swift                       │
+│  • started_at (DateTime) - Processing start time                           │
+│  • last_update (DateTime) - Most recent state change                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+🧙‍♂️ THE ELIXIR ARCHITECTURE ESSENCE:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  This isn't just a web backend - it's a concurrent, fault-tolerant         │
+│  AI processing engine built on the Actor model. Every AI request becomes   │
+│  an isolated, supervised process that can crash and restart without        │
+│  affecting the system's overall health.                                    │
+│                                                                             │
+│  The Elixir side transforms complex AI processing into simple, reliable    │
+│  process communication. It makes distributed, concurrent AI generation     │
+│  feel effortless through careful application of OTP design patterns.       │
+│                                                                             │
+│  Result: A backend that scales effortlessly, fails gracefully, and         │
+│  delivers real-time AI responses with the reliability of a telephone       │
+│  system - because it's built on the same principles.                       │
+└─────────────────────────────────────────────────────────────────────────────┘ 
